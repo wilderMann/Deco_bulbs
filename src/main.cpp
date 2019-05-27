@@ -253,8 +253,10 @@ void lampMQTTUpdate(int time){
                         if(lamps.getStatus()) {
                                 power = "true";
                         }
-                        client.publish("homie/deco-bulbs/lights/brightness",newDuty,true);
-                        client.publish("homie/deco-bulbs/lights/power",power.c_str(),true);
+                        string feedbackTopic = homieCTRL.getPubString("lights", "brightness");
+                        client.publish(feedbackTopic.c_str(),newDuty,true);
+                        feedbackTopic = homieCTRL.getPubString("lights", "power");
+                        client.publish(feedbackTopic.c_str(),power.c_str(),true);
                 }
 
         }
