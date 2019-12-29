@@ -41,13 +41,12 @@ void checkState();
 data_t meassurement();
 void funWithFlags();
 void meassureHandler();
-void heartBeatHandler();
+void handleStatus();
 
 
 string ClientID;
 unsigned long lastReconnectAttempt = 0;
 uint8_t flag_measure;
-uint8_t flag_heartBeat;
 
 ESP8266HTTPUpdateServer httpUpdater;
 ESP8266WebServer httpServer(80);
@@ -58,7 +57,7 @@ LEDString lamps(LAMPS);
 Ticker wait;
 DHTesp dht22;
 Ticker dhtMeasure;
-Ticker heartBeat;
+data_t oldData;
 
 void setup() {
         Serial.begin(115200);
@@ -78,9 +77,8 @@ void setup() {
         dht22.setup(D5, DHTesp::DHT22);
         ClientID = string(CLIENTID) + DEVICE_NAME;
 
-        HomieDevice homieDevice = HomieDevice(DEVICE_NAME, "Deco Bulbs", WiFi.localIP().toString().c_str(),
-                                              WiFi.macAddress().c_str(), FW_NAME, FW_VERSION,
-                                              "esp8266", "60");
+        HomieDevice homieDevice = HomieDevice(DEVICE_NAME, "Deco Bulbs", "",
+                                              CHIP_TYPE);
 
         HomieNode lights = HomieNode("lights", "Lights", "LEDDimmer");
         HomieNode dht = HomieNode("air-sensors", "Air Sensors", "DHT22");
@@ -109,7 +107,6 @@ void setup() {
 
         homieCTRL.connect(ClientID.c_str(), MQTT_USR, MQTT_PW);
         dhtMeasure.attach(MEASSURETIME, meassureHandler);
-        heartBeat.attach(60.0, heartBeatHandler);
 
         lamps.set(0);
         delay(500);
@@ -146,12 +143,33 @@ void httpServer_ini() {
         sprintf(buffer, "%s", DEVICE_NAME);
         MDNS.begin(buffer);
         httpUpdater.setup(&httpServer, update_path, update_username, update_password);
+        httpServer.on("/status",handleStatus);
         httpServer.begin();
         MDNS.addService("http", "tcp", 80);
         if(SERIAL) Serial.printf("HTTPUpdateServer ready! Open http://%s.local%s in your "
                                  "browser and login with username '%s' and password '%s'\n",
                                  buffer, update_path, update_username, update_password);
         //------
+}
+
+void handleStatus() {
+        String message;
+        message += "name: " + String(DEVICE_NAME) + "\n";
+        message += "chip: " + String(CHIP_TYPE) + "\n";
+        message += "IP: " + WiFi.localIP().toString() + "\n";
+        message +="free Heap: " + String(ESP.getFreeHeap()) + "\n";
+        message += "heap Fragmentation: " + String(ESP.getHeapFragmentation()) + "\n";
+        message += "MaxFreeBlockSize: " + String(ESP.getMaxFreeBlockSize()) + "\n";
+        message += "ChipId: " + String(ESP.getChipId()) + "\n";
+        message += "CoreVersion: " + String(ESP.getCoreVersion()) + "\n";
+        message += "SdkVersion: " + String(ESP.getSdkVersion()) + "\n";
+        message += "SketchSize: " + String(ESP.getSketchSize()) + "\n";
+        message += "FreeSketchSpace: " + String(ESP.getFreeSketchSpace()) + "\n";
+        message += "FlashChipId: " + String(ESP.getFlashChipId()) + "\n";
+        message += "FlashChipSize: " + String(ESP.getFlashChipSize()) + "\n";
+        message += "FlashChipRealSize: " + String(ESP.getFlashChipRealSize()) + "\n";
+        message += "\n" + String(oldData.temp) + "°C " + String(oldData.humidity) + "%";
+        httpServer.send(200, "text/plain", message);
 }
 
 data_t meassurement(){
@@ -165,7 +183,8 @@ data_t meassurement(){
 void funWithFlags(){
         if(flag_measure) {
                 data_t data = meassurement();
-                char buffer[6]; //3 char + point + 2 char
+                oldData = data;
+                char buffer[10]; //3 char + point + 2 char
                 sprintf(buffer, "%.2f", data.temp);
                 string topic = "homie/" + string(DEVICE_NAME) + "/air-sensors/temperature";
                 client.publish(topic.c_str(),buffer,true);
@@ -177,16 +196,7 @@ void funWithFlags(){
                 client.publish(topic.c_str(),buffer,true);
                 flag_measure = 0;
         }
-        if(flag_heartBeat) {
-                long time = millis() / 1000;
-                string topic = "homie/" + string(DEVICE_NAME) + "/$stats/uptime";
-                char payload[20];
-                sprintf(payload, "%ld", time);
-                client.publish(topic.c_str(), payload,true);
-                topic = "homie/" + string(DEVICE_NAME) + "/$stats/interval";
-                client.publish(topic.c_str(), "60",true);
-                flag_heartBeat = 0;
-        }
+
 }
 
 void callback(char *topic, byte *payload, unsigned int length){
@@ -268,8 +278,4 @@ void checkState(){
 
 void meassureHandler(){
         flag_measure = 1;
-}
-
-void heartBeatHandler(){
-        flag_heartBeat = 1;
 }
