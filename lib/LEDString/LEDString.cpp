@@ -15,9 +15,9 @@ void LEDString::set(int duty){
         duty_save = duty;
         if(duty >= 100) duty_save = 100;
         if(duty <= 0) duty_save = 0;
-        analogWrite(Pin, duty_save*10);
-        Serial.print("duty: ");
-        Serial.println(duty_save);
+        analogWrite(Pin, pwmtable_10[duty_save]);
+        if(SERIAL) if(SERIAL) Serial.print("duty: ");
+        if(SERIAL) if(SERIAL) Serial.println(duty_save);
 }
 
 void LEDString::on(){
@@ -48,16 +48,16 @@ void LEDString::move(int duty, int time_ms){
                 steps = time_ms / (duty - duty_save);
         }
         duty_goal = duty;
-        Serial.print("direction"); Serial.println(direction);
-        Serial.print("steps"); Serial.println(steps);
-        Serial.print("duty_goal"); Serial.println(duty_goal);
-        Serial.print("duty_save"); Serial.println(duty_save);
+        if(SERIAL) Serial.print("direction"); if(SERIAL) Serial.println(direction);
+        if(SERIAL) Serial.print("steps"); if(SERIAL) Serial.println(steps);
+        if(SERIAL) Serial.print("duty_goal"); if(SERIAL) Serial.println(duty_goal);
+        if(SERIAL) Serial.print("duty_save"); if(SERIAL) Serial.println(duty_save);
         tick.attach_ms(steps, LEDSTRING::tickHandlerLEDStr,this);
 }
 
 bool LEDString::ismoving(){
-        Serial.print("duty_goal"); Serial.println(duty_goal);
-        Serial.print("duty_save"); Serial.println(duty_save);
+        if(SERIAL) Serial.print("duty_goal"); if(SERIAL) Serial.println(duty_goal);
+        if(SERIAL) Serial.print("duty_save"); if(SERIAL) Serial.println(duty_save);
         if(duty_goal == duty_save) {
                 return false;
         } else {

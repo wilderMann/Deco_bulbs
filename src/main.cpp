@@ -12,7 +12,7 @@
 #include "homie.hpp"
 #include "LEDString.hpp"
 
-#define SERIAL true
+#define SERIAL false
 #define CLIENTID "ESP8266Client-"
 #define LAMPS D2
 #define DHT D5
@@ -60,8 +60,10 @@ Ticker dhtMeasure;
 data_t oldData;
 
 void setup() {
-        Serial.begin(115200);
-        while (!Serial);
+        if(SERIAL){
+          Serial.begin(115200);
+          while (!Serial);
+        }       
         WiFi.mode(WIFI_STA);
         WiFi.begin(WIFI_SSID, WIFI_PASS);
         while (WiFi.status() != WL_CONNECTED) {
@@ -104,10 +106,11 @@ void setup() {
         homieDevice.addNode(dht);
         homieDevice.addNode(lights);
         homieCTRL.setDevice(homieDevice);
-
+        if(SERIAL) Serial.println("Connecting MQTT...");
         homieCTRL.connect(ClientID.c_str(), MQTT_USR, MQTT_PW);
+        if(SERIAL) Serial.println("MQTT Connected.");
         dhtMeasure.attach(MEASSURETIME, meassureHandler);
-
+        if(SERIAL) Serial.println("Test lamps.");
         lamps.set(0);
         delay(500);
         lamps.set(100);
@@ -230,10 +233,10 @@ void callback(char *topic, byte *payload, unsigned int length){
 void lampMove(int duty, int time){
         if(time == 0) {
                 lamps.move(duty);
-                Serial.println("move");
+                if(SERIAL) Serial.println("move");
         }else{
                 lamps.move(duty,time);
-                Serial.println("move time");
+                if(SERIAL) Serial.println("move time");
         }
         lampMQTTUpdate();
 }
