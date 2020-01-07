@@ -16,8 +16,8 @@ void LEDString::set(int duty){
         if(duty >= 100) duty_save = 100;
         if(duty <= 0) duty_save = 0;
         analogWrite(Pin, pwmtable_10[duty_save]);
-        if(SERIAL) if(SERIAL) Serial.print("duty: ");
-        if(SERIAL) if(SERIAL) Serial.println(duty_save);
+        if(SERIAL) Serial.print("duty: ");
+        if(SERIAL) Serial.println(duty_save);
 }
 
 void LEDString::on(){
